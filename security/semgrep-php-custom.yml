@@ -1,0 +1,24 @@
+rules:
+  - id: php-include-dinamico
+    languages: [php]
+    severity: ERROR
+    message: include/require con ruta construida a partir de una variable (path traversal / LFI)
+    pattern-either:
+      - pattern: include($X . $Y)
+      - pattern: include($Y)
+      - pattern: require($X . $Y)
+  - id: php-subida-sin-validar
+    languages: [php]
+    severity: WARNING
+    message: move_uploaded_file con nombre original del cliente, sin validar tipo ni extensión
+    pattern: move_uploaded_file($TMP, $DEST)
+  - id: php-credenciales-hardcodeadas-mysqli
+    languages: [php]
+    severity: ERROR
+    message: Credenciales de base de datos escritas en el código
+    pattern: new mysqli("...", "...", "...", "...")
+  - id: php-cookie-sin-secure
+    languages: [php]
+    severity: WARNING
+    message: setcookie sin flag Secure
+    pattern: setcookie($N, $V, $E, $P, $D, false, ...)
