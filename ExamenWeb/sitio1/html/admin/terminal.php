@@ -81,9 +81,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ip'])) {
         $output .= "║                                                      ║\n";
         $output .= "╚══════════════════════════════════════════════════════╝";
     } else {
-        // Execució de la comanda original (Vulnerable si passa el filtre)
-        $param = (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') ? '-n' : '-c';
-        $output = shell_exec("ping $param 1 " . $ip);
+        // FIX (CWE-78): validacio del desti i escape de l'argument
+        if (!filter_var($ip, FILTER_VALIDATE_IP)) {
+            $output = "Objetivo no valido: se espera una direccion IP.";
+        } else {
+            $param = (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') ? '-n' : '-c';
+            $output = shell_exec("ping $param 1 " . escapeshellarg($ip));
+        }
     }
 
     if (empty($output)) {
