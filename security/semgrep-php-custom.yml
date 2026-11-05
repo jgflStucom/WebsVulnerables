@@ -3,10 +3,12 @@ rules:
     languages: [php]
     severity: ERROR
     message: include/require con ruta construida a partir de una variable (path traversal / LFI)
-    pattern-either:
-      - pattern: include($X . $Y)
-      - pattern: include($Y)
-      - pattern: require($X . $Y)
+    patterns:
+      - pattern-either:
+          - pattern: include($X . $Y)
+          - pattern: include($Y)
+          - pattern: require($X . $Y)
+      - pattern-not: include $MAPA[$K]
   - id: php-subida-sin-validar
     languages: [php]
     severity: WARNING
