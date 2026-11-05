@@ -13,77 +13,29 @@ if ($username !== 'admin') {
 }
 $output = "";
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ip'])) {
-    $ip = $_POST['ip'];
+    $ip = trim($_POST['ip']);
 
-    // Whitelist de comandes permeses per al CTF
-    $allowed_commands = [
-        'id', 'whoami', 'ls', 'cat', 'pwd', 'uname', 
-        'hostname', 'find', 'dir', 'type', 'ipconfig', 
-        'systeminfo', 'net', 'mysql'
-    ];
-
-    // Comprovem si hi ha caràcters d'injecció de comandes
-    $has_injection = preg_match('/[;|&`$()]/', $ip);
-    $blocked = false;
-
-    if ($has_injection) {
-        // Separem les comandes injectades (per exemple després d'un ;)
-        $parts = preg_split('/[;|&]+/', $ip);
-        
-        // Saltem la primera part (el destí del ping) i comprovem la resta
-        for ($i = 1; $i < count($parts); $i++) {
-            $current_cmd = trim($parts[$i]);
-            if (empty($current_cmd)) continue;
-
-            // Netegem possibles subshells per analitzar només la comanda
-            $clean_cmd = preg_replace('/^\$\(|\)$|^`|`$/', '', $current_cmd);
-            $clean_cmd = trim($clean_cmd);
-            if (empty($clean_cmd)) continue;
-
-            // Obtenim la comanda base (la primera paraula)
-            $base_cmd = strtolower(preg_split('/\s+/', $clean_cmd)[0]);
-            $base_cmd = basename($base_cmd);
-
-            // 1. Verificació de Whitelist
-            if (!in_array($base_cmd, $allowed_commands)) {
-                $blocked = true;
-                break;
-            }
-
-            // 2. FILTRE ESPECÍFIC: Evitar lectura de fitxers PHP
-            if ($base_cmd === 'cat') {
-                // Comprovem si en tota la cadena de la comanda apareix ".php"
-                if (stripos($current_cmd, '.php') !== false) {
-                    $blocked = true;
-                    break;
-                }
-            }
-        }
-    }
+    // Lista blanca estricta: solo una IP (v4/v6) o un nombre de host válido.
+    $es_ip   = filter_var($ip, FILTER_VALIDATE_IP) !== false;
+    $es_host = (bool) preg_match(
+        '/^(?=.{1,253}$)([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/',
+        $ip
+    );
+    $blocked = !($es_ip || $es_host);
 
     if ($blocked) {
         $output = "╔══════════════════════════════════════════════════════╗\n";
         $output .= "║  ⚠  ALERTA DE SEGURIDAD IMPERIAL - NIVEL MÁXIMO  ⚠  ║\n";
         $output .= "╠══════════════════════════════════════════════════════╣\n";
         $output .= "║                                                      ║\n";
-        $output .= "║   Se ha detectado un intento de ejecución de un      ║\n";
-        $output .= "║   comando NO AUTORIZADO en la terminal imperial.     ║\n";
-        $output .= "║                                                      ║\n";
-        $output .= "║   >>> Notificando a Lord Vader... <<<                ║\n";
-        $output .= "║                                                      ║\n";
-        $output .= "║   \"Encuentro tu falta de obediencia...               ║\n";
-        $output .= "║                           perturbadora.\"             ║\n";
-        $output .= "║                           — Darth Vader              ║\n";
-        $output .= "║                                                      ║\n";
-        $output .= "║   Tu ID de terminal ha sido registrado.              ║\n";
-        $output .= "║   Los Stormtroopers han sido enviados a tu           ║\n";
-        $output .= "║   ubicación. No intentes escapar.                    ║\n";
+        $output .= "║   Destino no válido. Solo se admite una dirección    ║\n";
+        $output .= "║   IP o un nombre de host.                            ║\n";
         $output .= "║                                                      ║\n";
         $output .= "╚══════════════════════════════════════════════════════╝";
     } else {
-        // Execució de la comanda original (Vulnerable si passa el filtre)
+        // Argumento escapado y sin shell intermedia para la entrada del usuario
         $param = (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') ? '-n' : '-c';
-        $output = shell_exec("ping $param 1 " . $ip);
+        $output = shell_exec("ping $param 1 " . escapeshellarg($ip));
     }
 
     if (empty($output)) {
