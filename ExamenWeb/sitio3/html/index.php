@@ -1,6 +1,10 @@
 <?php
-// VULNERABLE: Path Traversal via lang parameter
+// Lista blanca: solo idiomas conocidos, mapeados a rutas fijas
+$rutas_idioma = ['en.php' => __DIR__ . '/lang/en.php', 'es.php' => __DIR__ . '/lang/es.php'];
 $lang = $_GET['lang'] ?? 'es.php';
+if (!is_string($lang) || !array_key_exists($lang, $rutas_idioma)) {
+    $lang = 'es.php';
+}
 
 require_once __DIR__ . '/db.php';
 
@@ -87,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['author'], $_POST['mes
                 <?php
                 // VULNERABLE: Direct file inclusion - no path sanitization
                 // Student can use: ?lang=../../../../flag.txt
-                include("lang/" . $lang);
+                include $rutas_idioma[$lang];
                 ?>
             </div>
 
