@@ -41,6 +41,7 @@ pipeline {
     }
     stage('Desplegar laboratorio') {
       steps {
+        sh 'docker ps -aq --filter name=ci_ | xargs -r docker rm -f'
         sh 'cp -r ExamenWeb lab'
         writeFile file: 'compose.ci.yml', text: '''services:
   db1: { container_name: ci_mysql_1, restart: "no" }
