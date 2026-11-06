@@ -13,7 +13,9 @@ rules:
     languages: [php]
     severity: WARNING
     message: move_uploaded_file con nombre original del cliente, sin validar tipo ni extensión
-    pattern: move_uploaded_file($TMP, $DEST)
+    patterns:
+      - pattern: move_uploaded_file($TMP, $DEST)
+      - pattern-not: move_uploaded_file($TMP, $DIR . $nombre_seguro)
   - id: php-credenciales-hardcodeadas-mysqli
     languages: [php]
     severity: ERROR

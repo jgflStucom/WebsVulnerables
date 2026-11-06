@@ -21,19 +21,29 @@ if (!file_exists($upload_dir)) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['sys_file'])) {
     $file = $_FILES['sys_file'];
-    $filename = $file['name'];
     $tmp_name = $file['tmp_name'];
 
-    // VULNERABILIDAD: Validación débil de extensión
-    // Solo comprueba si contiene ".jpg", permitiendo "shell.php.jpg" o similar.
-    if (strpos($filename, '.jpg') !== false) {
-        if (move_uploaded_file($tmp_name, $upload_dir . $filename)) {
-            $msg = "Archivo de sistema subido correctamente: " . htmlspecialchars($filename);
+    // Lista blanca de extensión + comprobación del contenido real + tamaño máximo
+    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    $valido = $file['error'] === UPLOAD_ERR_OK
+        && is_uploaded_file($tmp_name)
+        && in_array($ext, ['jpg', 'jpeg'], true)
+        && $file['size'] <= 2 * 1024 * 1024;
+    if ($valido) {
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $valido = $finfo->file($tmp_name) === 'image/jpeg' && @getimagesize($tmp_name) !== false;
+    }
+
+    if ($valido) {
+        // Nombre generado por el servidor: el nombre del cliente nunca se usa
+        $nombre_seguro = bin2hex(random_bytes(16)) . '.jpg';
+        if (move_uploaded_file($tmp_name, $upload_dir . $nombre_seguro)) {
+            $msg = "Archivo de sistema subido correctamente: " . htmlspecialchars($nombre_seguro);
         } else {
             $error = "Error al mover el archivo al repositorio de sistemas.";
         }
     } else {
-        $error = "Formato no válido. El sistema solo acepta esquemas visuales (.jpg).";
+        $error = "Formato no válido. El sistema solo acepta esquemas visuales (.jpg) de hasta 2 MB.";
     }
 }
 ?>
