@@ -68,25 +68,87 @@ pipeline {
         '''
       }
     }
-    stage('DAST: OWASP ZAP') {
+    stage('DAST: OWASP ZAP (autenticado)') {
       steps {
         script {
           sh 'rm -rf zap && mkdir -p zap && chmod 777 zap'
-          def script_zap = (params.ZAP_MODE == 'full') ? 'zap-full-scan.py' : 'zap-baseline.py'
-          def extra = (params.ZAP_MODE == 'full') ? '-T 8 -z "-config scanner.maxScanDurationInMins=2"' : ''
-          def peor = 0
-          env.LAB_SITES.split(' ').each { s ->
-            def (nombre, puerto) = s.split(':')
-            def rc = sh(returnStatus: true, script: """
-              docker run --rm --network host -v "\$WORKSPACE/zap":/zap/wrk:rw ${env.ZAP_IMAGE} \
-                ${script_zap} -t http://localhost:${puerto} -m 1 ${extra} \
-                -r ${nombre}.html -J ${nombre}.json -w ${nombre}.md > zap/${nombre}.log 2>&1
-            """)
-            echo "ZAP ${nombre}: código de salida ${rc}"
-            if (rc > peor) { peor = rc }
+          def full = (params.ZAP_MODE == 'full')
+          def sitios = [
+            [nombre: 'sitio1', puerto: '55340', cred: 'zap-sitio1', login: 'index.php',
+             cuerpo: 'user={%username%}&pass={%password%}',
+             dentro: '\\Qlogout.php\\E', fuera: 'name="pass"', logout: 'logout\\.php.*',
+             semillas: ['admin/', 'admin/terminal.php', 'admin/destruct.php', 'system/', 'dev/']],
+            [nombre: 'sitio2', puerto: '55350', cred: 'zap-sitio2', login: 'login.php',
+             cuerpo: 'username={%username%}&password={%password%}',
+             dentro: '\\Qlogout.php\\E', fuera: 'name="password"', logout: 'logout\\.php.*',
+             semillas: ['private/', 'private/upload_map.php', 'mordor/wall.php']],
+            [nombre: 'sitio3', puerto: '55360', cred: 'zap-sitio3', login: 'login.php',
+             cuerpo: 'username={%username%}&password={%password%}',
+             dentro: '\\Qlogout=1\\E', fuera: 'name="password"', logout: 'login\\.php\\?logout.*',
+             semillas: ['admin/', 'admin/navigation.php', 'management/', 'shuttle/', 'wanted/']]
+          ]
+          def hayAlertas = false
+          sitios.each { s ->
+            def urls = ([''] + s.semillas).collect { "'http://localhost:${s.puerto}/${it}'" }.join(', ')
+            def plan = '''env:
+  contexts:
+    - name: @@NAME@@
+      urls: [@@URLS@@]
+      includePaths: ['http://localhost:@@PORT@@.*']
+      excludePaths: ['http://localhost:@@PORT@@/@@LOGOUT@@']
+      authentication:
+        method: form
+        parameters:
+          loginPageUrl: 'http://localhost:@@PORT@@/@@LOGIN@@'
+          loginRequestUrl: 'http://localhost:@@PORT@@/@@LOGIN@@'
+          loginRequestBody: '@@BODY@@'
+        verification:
+          method: response
+          loggedInRegex: '@@IN@@'
+          loggedOutRegex: '@@OUT@@'
+      sessionManagement:
+        method: cookie
+      users:
+        - name: usuario
+          credentials:
+            username: "${ZAP_USER}"
+            password: "${ZAP_PASS}"
+  parameters: { failOnError: true, failOnWarning: false, progressToStdout: true }
+jobs:
+  - type: spider
+    parameters: { context: @@NAME@@, user: usuario, maxDuration: 1 }
+  - type: passiveScan-wait
+'''
+            plan = plan.replace('@@NAME@@', s.nombre).replace('@@URLS@@', urls)
+                       .replace('@@PORT@@', s.puerto).replace('@@LOGOUT@@', s.logout)
+                       .replace('@@LOGIN@@', s.login).replace('@@BODY@@', s.cuerpo)
+                       .replace('@@IN@@', s.dentro).replace('@@OUT@@', s.fuera)
+            if (full) {
+              plan += "  - type: activeScan\n    parameters: { context: ${s.nombre}, user: usuario, maxScanDurationInMins: 10 }\n"
+            }
+            ['traditional-html': 'html', 'traditional-json': 'json', 'traditional-md': 'md'].each { tpl, ext ->
+              plan += "  - type: report\n    parameters: { template: ${tpl}, reportDir: /zap/wrk, reportFile: ${s.nombre}, reportTitle: 'ZAP ${s.nombre} autenticado' }\n    risks: [info, low, medium, high]\n"
+            }
+            writeFile file: "zap/plan-${s.nombre}.yaml", text: plan
+
+            echo "ZAP ${full ? 'full' : 'baseline'} autenticado contra ${s.nombre}"
+            withCredentials([usernamePassword(credentialsId: s.cred, usernameVariable: 'ZAP_USER', passwordVariable: 'ZAP_PASS')]) {
+              def rc = sh(returnStatus: true, script: """
+                docker rm -f ci_zap 2>/dev/null || true
+                docker run --rm --name ci_zap --network host -e ZAP_USER -e ZAP_PASS \\
+                  -v "\$WORKSPACE/zap":/zap/wrk:rw ${env.ZAP_IMAGE} \\
+                  zap.sh -cmd -port 8099 -autorun /zap/wrk/plan-${s.nombre}.yaml > zap/${s.nombre}.log 2>&1
+              """)
+              if (rc != 0) { error("ZAP ha fallado en ${s.nombre} con código ${rc}") }
+            }
+            sh "grep -E 'spider found|activeScan finished' zap/${s.nombre}.log || true"
+            def r = sh(returnStdout: true, script: """
+              for n in 3 2 1 0; do printf '%s ' \$(grep -c '"riskcode": *"'\$n'"' zap/${s.nombre}.json || true); done
+            """).trim().split(' ').collect { it as int }
+            echo "${s.nombre}: High=${r[0]} Medium=${r[1]} Low=${r[2]} Info=${r[3]}"
+            if (r[0] + r[1] + r[2] > 0) { hayAlertas = true }
           }
-          if (peor == 1 || peor == 2) { unstable('ZAP ha encontrado alertas') }
-          else if (peor != 0) { error("ZAP ha fallado con código ${peor}") }
+          if (hayAlertas) { unstable('ZAP ha encontrado alertas') }
         }
       }
     }
