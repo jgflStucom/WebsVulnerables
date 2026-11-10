@@ -43,9 +43,9 @@ pipeline {
       steps {
         sh 'docker ps -aq --filter name=ci_ | xargs -r docker rm -f'
         sh 'cp -r ExamenWeb lab'
-        withCredentials([string(credentialsId: 'db-pass-sitio1', variable: 'DB1_PASS'),
-                         string(credentialsId: 'db-pass-sitio2', variable: 'DB2_PASS'),
-                         string(credentialsId: 'db-pass-sitio3', variable: 'DB3_PASS'),
+        withCredentials([string(credentialsId: 'db-pass-sitio-1', variable: 'DB1_PASS'),
+                         string(credentialsId: 'db-pass-sitio-2', variable: 'DB2_PASS'),
+                         string(credentialsId: 'db-pass-sitio-3', variable: 'DB3_PASS'),
                          string(credentialsId: 'unlock-pass', variable: 'UNLOCK_PASS')]) {
           // El .env se genera solo en el laboratorio temporal y nunca se guarda en Git
           sh '''#!/bin/sh -e
