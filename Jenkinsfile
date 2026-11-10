@@ -48,8 +48,11 @@ pipeline {
                          string(credentialsId: 'db-pass-sitio3', variable: 'DB3_PASS'),
                          string(credentialsId: 'unlock-pass', variable: 'UNLOCK_PASS')]) {
           // El .env se genera solo en el laboratorio temporal y nunca se guarda en Git
-          sh '''
+          sh '''#!/bin/sh -e
             umask 077
+            for v in "$DB1_PASS" "$DB2_PASS" "$DB3_PASS" "$UNLOCK_PASS"; do
+              [ -n "$v" ] || { echo "ERROR: una credencial de BD esta vacia"; exit 1; }
+            done
             {
               printf "DB1_PASS='%s'\\n" "$DB1_PASS"
               printf "DB2_PASS='%s'\\n" "$DB2_PASS"
