@@ -5,11 +5,12 @@ require_once __DIR__ . '/../db.php';
 
 // HARDENING: Protección con contraseña
 $auth_cookie = 'st_logs_auth';
-$auth_pass = 'mmora';
-$auth_hash = hash('sha256', $auth_pass . 'salt_starfleet');
+$auth_pass = getenv('UNLOCK_PASS');
+if ($auth_pass === false || $auth_pass === '') { http_response_code(500); die('Configuracion incompleta'); }
+$auth_hash = hash_hmac('sha256', 'st_logs_auth', $auth_pass);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['unlock_pass'])) {
-    if ($_POST['unlock_pass'] === $auth_pass) {
+    if (hash_equals($auth_pass, (string) $_POST['unlock_pass'])) {
         setcookie($auth_cookie, $auth_hash, ['expires' => time() + 3600, 'path' => '/', 'secure' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'), 'httponly' => true, 'samesite' => 'Strict']);
         header("Location: index.php");
         exit();
@@ -18,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['unlock_pass'])) {
     }
 }
 
-if (!isset($_COOKIE[$auth_cookie]) || $_COOKIE[$auth_cookie] !== $auth_hash) {
+if (!isset($_COOKIE[$auth_cookie]) || !hash_equals($auth_hash, (string) $_COOKIE[$auth_cookie])) {
     ?>
     <!DOCTYPE html>
     <html lang="es">

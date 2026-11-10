@@ -46,6 +46,7 @@ services:
       DB_USER: root
       DB_PASS: ${DB2_PASS}
       DB_NAME: mordor
+      UNLOCK_PASS: ${UNLOCK_PASS}
     ports:
       - "54350:80"
     volumes:
@@ -73,6 +74,7 @@ services:
       DB_USER: root
       DB_PASS: ${DB3_PASS}
       DB_NAME: enterprise
+      UNLOCK_PASS: ${UNLOCK_PASS}
     ports:
       - "54360:80"
     volumes:

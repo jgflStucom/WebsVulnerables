@@ -45,7 +45,8 @@ pipeline {
         sh 'cp -r ExamenWeb lab'
         withCredentials([string(credentialsId: 'db-pass-sitio1', variable: 'DB1_PASS'),
                          string(credentialsId: 'db-pass-sitio2', variable: 'DB2_PASS'),
-                         string(credentialsId: 'db-pass-sitio3', variable: 'DB3_PASS')]) {
+                         string(credentialsId: 'db-pass-sitio3', variable: 'DB3_PASS'),
+                         string(credentialsId: 'unlock-pass', variable: 'UNLOCK_PASS')]) {
           // El .env se genera solo en el laboratorio temporal y nunca se guarda en Git
           sh '''
             umask 077
@@ -54,6 +55,7 @@ pipeline {
               printf "DB2_PASS='%s'\\n" "$DB2_PASS"
               printf "DB3_PASS='%s'\\n" "$DB3_PASS"
               printf "DB4_PASS='%s'\\n" "$(head -c 12 /dev/urandom | base64 | tr -dc A-Za-z0-9)"
+              printf "UNLOCK_PASS='%s'\\n" "$UNLOCK_PASS"
             } > lab/.env
           '''
         }
