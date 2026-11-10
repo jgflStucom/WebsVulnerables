@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $_SESSION['admin_logged_in'] = true;
         $_SESSION['admin_user'] = $row['username'];
-        setcookie('admin_session', $token, 0, '/', '', false, true);
+        setcookie('admin_session', $token, ['expires' => 0, 'path' => '/', 'secure' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'), 'httponly' => true, 'samesite' => 'Strict']);
         header("Location: admin/");
         exit();
     } else {

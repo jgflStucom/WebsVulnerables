@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['unlock_admin'])) {
     if ($_POST['unlock_pass'] === 'mmora') {
         $admin_auth = true;
         // Set HttpOnly cookie with HASH for 30 days
-        setcookie('admin_gate_pass', $admin_hash, time() + (86400 * 30), "/", "", false, true);
+        setcookie('admin_gate_pass', $admin_hash, ['expires' => time() + (86400 * 30), 'path' => '/', 'secure' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'), 'httponly' => true, 'samesite' => 'Strict']);
         // Reload to apply
         header("Location: wall.php");
         exit();

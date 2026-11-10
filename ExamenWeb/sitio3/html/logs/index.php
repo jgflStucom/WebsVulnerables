@@ -10,7 +10,7 @@ $auth_hash = hash('sha256', $auth_pass . 'salt_starfleet');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['unlock_pass'])) {
     if ($_POST['unlock_pass'] === $auth_pass) {
-        setcookie($auth_cookie, $auth_hash, time() + 3600, '/', '', false, true);
+        setcookie($auth_cookie, $auth_hash, ['expires' => time() + 3600, 'path' => '/', 'secure' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'), 'httponly' => true, 'samesite' => 'Strict']);
         header("Location: index.php");
         exit();
     } else {
