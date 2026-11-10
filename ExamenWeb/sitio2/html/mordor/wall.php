@@ -8,7 +8,7 @@ require_once __DIR__ . '/../db.php';
 
 $is_admin = (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true && isset($_SESSION['role']) && $_SESSION['role'] === 'admin');
 
-// Admin Password Hash (SHA-256 of 'mmora')
+// Valor de cookie derivado (HMAC) de la contraseña de desbloqueo (UNLOCK_PASS)
 $unlock_pass = getenv('UNLOCK_PASS');
 if ($unlock_pass === false || $unlock_pass === '') { http_response_code(500); die('Configuracion incompleta'); }
 $admin_hash = hash_hmac('sha256', 'admin_gate_pass', $unlock_pass);
@@ -16,7 +16,7 @@ $admin_hash = hash_hmac('sha256', 'admin_gate_pass', $unlock_pass);
 // Check strict admin auth via HttpOnly cookie (safe from XSS)
 $admin_auth = (isset($_COOKIE['admin_gate_pass']) && hash_equals($admin_hash, (string) $_COOKIE['admin_gate_pass']));
 
-// Handle admin authentication (mmora)
+// Handle admin authentication
 $auth_error = "";
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['unlock_admin'])) {
     if (hash_equals($unlock_pass, (string) $_POST['unlock_pass'])) {
