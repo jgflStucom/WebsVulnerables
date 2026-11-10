@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # --- EXAMEN WEB 1 (Puerto 54340) ---
   db1:
@@ -8,7 +6,7 @@ services:
     command: --default-authentication-plugin=mysql_native_password
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: root_pass_examen1
+      MYSQL_ROOT_PASSWORD: ${DB1_PASS}
       MYSQL_DATABASE: db_sitio1
     volumes:
       - ./sitio1/db_data:/var/lib/mysql
@@ -16,6 +14,11 @@ services:
   web1:
     build: .
     container_name: web_examen_1
+    environment:
+      DB_HOST: db1
+      DB_USER: root
+      DB_PASS: ${DB1_PASS}
+      DB_NAME: deathstar
     ports:
       - "54340:80"
     volumes:
@@ -30,7 +33,7 @@ services:
     command: --default-authentication-plugin=mysql_native_password
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: root_pass_examen2
+      MYSQL_ROOT_PASSWORD: ${DB2_PASS}
       MYSQL_DATABASE: db_sitio2
     volumes:
       - ./sitio2/db_data:/var/lib/mysql
@@ -38,6 +41,11 @@ services:
   web2:
     build: .
     container_name: web_examen_2
+    environment:
+      DB_HOST: db2
+      DB_USER: root
+      DB_PASS: ${DB2_PASS}
+      DB_NAME: mordor
     ports:
       - "54350:80"
     volumes:
@@ -52,7 +60,7 @@ services:
     command: --default-authentication-plugin=mysql_native_password
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: root_pass_examen3
+      MYSQL_ROOT_PASSWORD: ${DB3_PASS}
       MYSQL_DATABASE: db_sitio3
     volumes:
       - ./sitio3/db_data:/var/lib/mysql
@@ -60,6 +68,11 @@ services:
   web3:
     build: .
     container_name: web_examen_3
+    environment:
+      DB_HOST: db3
+      DB_USER: root
+      DB_PASS: ${DB3_PASS}
+      DB_NAME: enterprise
     ports:
       - "54360:80"
     volumes:
@@ -74,7 +87,7 @@ services:
     command: --default-authentication-plugin=mysql_native_password
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: root_pass_examen4
+      MYSQL_ROOT_PASSWORD: ${DB4_PASS}
       MYSQL_DATABASE: db_sitio4
     volumes:
       - ./sitio4/db_data:/var/lib/mysql
@@ -82,6 +95,11 @@ services:
   web4:
     build: .
     container_name: web_examen_4
+    environment:
+      DB_HOST: db4
+      DB_USER: root
+      DB_PASS: ${DB4_PASS}
+      DB_NAME: db_sitio4
     ports:
       - "54370:80"
     volumes:

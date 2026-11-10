@@ -43,6 +43,20 @@ pipeline {
       steps {
         sh 'docker ps -aq --filter name=ci_ | xargs -r docker rm -f'
         sh 'cp -r ExamenWeb lab'
+        withCredentials([string(credentialsId: 'db-pass-sitio1', variable: 'DB1_PASS'),
+                         string(credentialsId: 'db-pass-sitio2', variable: 'DB2_PASS'),
+                         string(credentialsId: 'db-pass-sitio3', variable: 'DB3_PASS')]) {
+          // El .env se genera solo en el laboratorio temporal y nunca se guarda en Git
+          sh '''
+            umask 077
+            {
+              printf "DB1_PASS='%s'\\n" "$DB1_PASS"
+              printf "DB2_PASS='%s'\\n" "$DB2_PASS"
+              printf "DB3_PASS='%s'\\n" "$DB3_PASS"
+              printf "DB4_PASS='%s'\\n" "$(head -c 12 /dev/urandom | base64 | tr -dc A-Za-z0-9)"
+            } > lab/.env
+          '''
+        }
         writeFile file: 'compose.ci.yml', text: '''services:
   db1: { container_name: ci_mysql_1, restart: "no" }
   db2: { container_name: ci_mysql_2, restart: "no" }
@@ -168,6 +182,7 @@ jobs:
   post {
     always {
       sh '[ -f compose.ci.yml ] && ${LAB_COMPOSE} down --remove-orphans || true'
+      sh 'rm -f lab/.env'
     }
   }
 }
